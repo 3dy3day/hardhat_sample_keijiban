@@ -5,7 +5,7 @@ cd backend
 npm install  
   
 # solidityファイルのコンパイル  
-npx compile  
+npx hardhat compile  
   
 # hardhat プライベートブロックチェーンの構築  
 npx hardhat node  
@@ -16,6 +16,9 @@ npx hardhat run --network localhost scripts/deploy.ts
 ## 2. /frontendの作業  
 ```  
 cd frontend  
+  
+# コンパイルで生成されたABIをsrc/abiにコピー  
+cp ..\backend\artifacts\contracts\keijiban.sol\keijiban.json .\src\abi\  
   
 # 必要パッケージのインストール  
 npm install  
