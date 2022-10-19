@@ -1,5 +1,8 @@
-## 1. /backendの作業  
-``` 
+# ブロックチェーン掲示板アプリのサンプル
+
+## 1. /backendの作業
+
+``` bash  
 cd backend  
 # 必要パッケージのインストール  
 npm install  
@@ -13,15 +16,10 @@ npx hardhat node
 # プライベートブロックチェーンにコンパイルしたコードをデプロイ  
 npx hardhat run --network localhost scripts/deploy.ts  
 ```  
-
-もしくは、  
-```  
-cd backend  
-make  
-```  
   
 ## 2. /frontendの作業  
-```  
+
+``` bash  
 cd frontend  
   
 # コンパイルで生成されたABIをsrc/abiにコピー  
@@ -32,10 +30,4 @@ npm install
   
 # フロントエンドのローカルサーバ構築  
 npm run dev  
-```  
-  
-もしくは、  
-```  
-cd frontend  
-make  
 ```  
