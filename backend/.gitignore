@@ -234,3 +234,4 @@ dist
 #Hardhat files
 cache
 artifacts
+typechain-types

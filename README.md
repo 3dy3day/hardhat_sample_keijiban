@@ -18,7 +18,7 @@ npx hardhat run --network localhost scripts/deploy.ts
 cd frontend  
   
 # コンパイルで生成されたABIをsrc/abiにコピー  
-cp ..\backend\artifacts\contracts\keijiban.sol\keijiban.json .\src\abi\  
+cp ../backend/artifacts/contracts/keijiban.sol/keijiban.json ./src/abi/  
   
 # 必要パッケージのインストール  
 npm install  
