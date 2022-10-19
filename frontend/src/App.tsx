@@ -2,20 +2,27 @@ import { ethers, Contract } from "ethers";
 import React from "react";
 import artifact from "./abi/keijiban.json";
 
+class Post {
+  public name = "";
+  public content = "";
+  public author = "";
+  public good_count = ethers.BigNumber.from(0);
+}
+
+class PostWithID {
+  public post = new Post();
+  public id = ethers.BigNumber.from(0);
+}
+
 interface AppState {
   // genaral
-  posts: Post[];
+  posts: PostWithID[];
+  balance: ethers.BigNumber;
   contract: ethers.Contract | null;
 
   // inputs
   inputName: string;
   inputContent: string;
-}
-
-class Post {
-  public name = "";
-  public content = "";
-  public id = "";
 }
 
 export class App extends React.Component<any, AppState> {
@@ -37,26 +44,44 @@ export class App extends React.Component<any, AppState> {
       // State初期化
       this.setState((p) => ({ contract: contractWithSigner }));
       this.getPosts();
+      this.getBalance();
 
       // SolidityのCreatedPostイベントを補足する
-      const filters: ethers.EventFilter =
-        contractWithSigner.filters.CreatedPost(null, null, null);
-      if (filters !== undefined) {
+      // コンテンツ投稿更新のイベント
+      provider.once("block", () => {
+        contractWithSigner.on(
+          contractWithSigner.filters.CreatedPost(null, null, null),
+          this.handleCreatedPostEvent,
+        );
+      });
+      signer.getAddress().then((myAddress: string) => {
+        // いいね送信時のイベント
         provider.once("block", () => {
-          contractWithSigner.on(filters, this.handleCreatedPostEvent);
+          contractWithSigner.on(
+            contractWithSigner.filters.Good(myAddress, null, null),
+            this.handleSendGoodEvent,
+          );
         });
-      }
+        // いいね受信時のイベント
+        provider.once("block", () => {
+          contractWithSigner.on(
+            contractWithSigner.filters.Good(null, myAddress, null),
+            this.handleReceiveGoodEvent,
+          );
+        });
+      });
     });
 
     this.state = {
-      posts: [] as Post[],
+      posts: [],
+      balance: ethers.BigNumber.from(0),
       contract: null,
       inputName: "",
       inputContent: "",
     };
   }
 
-  private connectWallet = async () => {
+  connectWallet = async () => {
     // With hardhat test account
     const provider = new ethers.providers.JsonRpcProvider();
 
@@ -67,22 +92,44 @@ export class App extends React.Component<any, AppState> {
     return provider;
   };
 
-  private getPosts = async () => {
-    // Solidityの方で定義したgetPostsを呼び出し、Postの一覧を取得する
-    if (this.state.contract !== null) {
-      const result = await this.state.contract.getPosts();
-      this.setState((p) => ({ posts: result }));
+  // Solidity側で定義したgetPostsを呼び出し、Postの一覧を取得する
+  getPosts = async () => {
+    if (this.state.contract == null) {
+      return;
     }
+    const result = await this.state.contract.getPosts();
+    this.setState((p) => ({ posts: result }));
   };
 
-  private createPost = () => {
-    // Solidityの方で定義したcreatePostを呼び出し、Postを新規作成する
-    if (this.state.contract !== null) {
-      this.state.contract.createPost(
-        this.state.inputName,
-        this.state.inputContent,
-      );
+  // Solidity側で定義したcreatePostを呼び出し、Postを新規作成する
+  createPost = () => {
+    if (this.state.contract == null) {
+      return;
     }
+    this.state.contract.createPost(
+      this.state.inputName,
+      this.state.inputContent,
+    );
+  };
+
+  // Solidity側で定義したgoodを呼び出し、いいね処理を行う
+  good = (contentId: ethers.BigNumber) => {
+    if (this.state.contract == null) {
+      return;
+    }
+    this.state.contract.good(contentId);
+  };
+
+  // Solidity側で定義したgetBalanceを呼び出し、現在の残高を取得する
+  getBalance = async () => {
+    if (this.state.contract == null) {
+      return;
+    }
+    const balance =
+      (await this.state.contract.getBalance()) as ethers.BigNumber;
+    this.setState((p) => ({
+      balance: balance,
+    }));
   };
 
   /// handlers
@@ -109,19 +156,49 @@ export class App extends React.Component<any, AppState> {
     this.getPosts();
   };
 
+  handleSendGoodEvent = (
+    from: string,
+    to: string,
+    result: ethers.BigNumber,
+  ) => {
+    if (result.toNumber() == 1) {
+      alert("残高不足です");
+    }
+    if (result.toNumber() == 2) {
+      alert("自分にいいねは送れません");
+    }
+    this.getBalance();
+    this.getPosts();
+  };
+
+  handleReceiveGoodEvent = (
+    from: string,
+    to: string,
+    result: ethers.BigNumber,
+  ) => {
+    this.getBalance();
+    this.getPosts();
+  };
+
   render() {
-    const listItems = this.state.posts.map((post, index) => (
-      <div key={index}>
-        投稿者: {post.name} ID: {post.id}
-        <br></br>
-        <p>{post.content}</p>
-      </div>
-    ));
     return (
       <div>
         <h1>Welcome to Blockchain Keijiban</h1>
-        <div>{listItems}</div>
-
+        <div>現在の残高: {this.state.balance.toString()}</div>
+        <div>
+          {this.state.posts.map((post, index) => (
+            <div key={index}>
+              <hr />
+              <div>投稿者: {post.post.name}</div>
+              <div>ID: {post.post.author}</div>
+              <div>いいねの数: {post.post.good_count.toString()}</div>
+              <div>
+                <button onClick={() => this.good(post.id)}>いいね</button>
+              </div>
+              <p>{post.post.content}</p>
+            </div>
+          ))}
+        </div>
         <hr></hr>
         <p>
           名前<br></br>
@@ -143,7 +220,6 @@ export class App extends React.Component<any, AppState> {
             value={this.state.inputContent}
           ></textarea>
         </p>
-
         <button onClick={this.handleClickSendButton}>投稿</button>
       </div>
     );
