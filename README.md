@@ -13,6 +13,13 @@ npx hardhat node
 # プライベートブロックチェーンにコンパイルしたコードをデプロイ  
 npx hardhat run --network localhost scripts/deploy.ts  
 ```  
+
+もしくは、  
+```  
+cd backend  
+make  
+```  
+  
 ## 2. /frontendの作業  
 ```  
 cd frontend  
@@ -25,4 +32,10 @@ npm install
   
 # フロントエンドのローカルサーバ構築  
 npm run dev  
+```  
+  
+もしくは、  
+```  
+cd frontend  
+make  
 ```  
