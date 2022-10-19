@@ -58,15 +58,15 @@ export class App extends React.Component<any, AppState> {
         // いいね送信時のイベント
         provider.once("block", () => {
           contractWithSigner.on(
-            contractWithSigner.filters.Good(myAddress, null, null),
-            this.handleSendGoodEvent,
+            contractWithSigner.filters.Transfer(myAddress, null, null),
+            this.handleTransferEvent,
           );
         });
         // いいね受信時のイベント
         provider.once("block", () => {
           contractWithSigner.on(
-            contractWithSigner.filters.Good(null, myAddress, null),
-            this.handleReceiveGoodEvent,
+            contractWithSigner.filters.Transfer(null, myAddress, null),
+            this.handleTransferEvent,
           );
         });
       });
@@ -156,25 +156,10 @@ export class App extends React.Component<any, AppState> {
     this.getPosts();
   };
 
-  handleSendGoodEvent = (
+  handleTransferEvent = (
     from: string,
     to: string,
-    result: ethers.BigNumber,
-  ) => {
-    if (result.toNumber() == 1) {
-      alert("残高不足です");
-    }
-    if (result.toNumber() == 2) {
-      alert("自分にいいねは送れません");
-    }
-    this.getBalance();
-    this.getPosts();
-  };
-
-  handleReceiveGoodEvent = (
-    from: string,
-    to: string,
-    result: ethers.BigNumber,
+    amount: ethers.BigNumber,
   ) => {
     this.getBalance();
     this.getPosts();
@@ -184,7 +169,7 @@ export class App extends React.Component<any, AppState> {
     return (
       <div>
         <h1>Welcome to Blockchain Keijiban</h1>
-        <div>現在の残高: {this.state.balance.toString()}</div>
+        <div>現在の残高: {this.state.balance.toString()}G</div>
         <div>
           {this.state.posts.map((post, index) => (
             <div key={index}>

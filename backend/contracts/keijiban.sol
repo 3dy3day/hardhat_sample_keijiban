@@ -1,16 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-contract keijiban {
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+
+contract keijiban is ERC20 {
     ///////////////////////////////////////////////////////////////////////////////////////////
     /// イベント
     /// イベントはフロントエンドで購読することができる
 
     // コンテンツが投稿されたときに発火するイベント
     event CreatedPost(string indexed name, string content, address id);
-
-    // いいねボタンを押したとき発火するイベント
-    event Good(address indexed from, address indexed to, uint256 result);
 
     ///////////////////////////////////////////////////////////////////////////////////////////
     /// 構造体宣言
@@ -44,7 +43,7 @@ contract keijiban {
     address public minter;
 
     // いいねすることで送られる金額
-    uint256 constant good_gift = 10;
+    uint256 constant good_value = 10;
 
     // 掲示板に投稿されたコンテンツ
     // いいね機能のために全コンテンツの探索を行う必要があるため、
@@ -52,41 +51,31 @@ contract keijiban {
     // 参考：https://qiita.com/yuhattor/items/2bd78cafd1bfd3f08b69#array-vs-mapping
     mapping(uint256 => Post) public posts;
 
-    // 通貨の残高
-    mapping(address => uint256) public balances;
-
     ///////////////////////////////////////////////////////////////////////////////////////////
     /// メンバ関数
 
     // コンストラクタ。デプロイ時に一回だけ呼ばれる
-    constructor() {
+    constructor() ERC20("GOLD", "G") {
         minter = msg.sender;
         posts_length = 0;
-        balances[minter] = 100;
+        _mint(msg.sender, 100);
         createPost(unicode"管理人", unicode"ほんわかレス推奨です！");
     }
 
-    // 通貨のチャージ（デプロイヤーのアドレス以外でのチャージは不可）
-    function mint(address _receiver, uint256 _amount) public {
-        if (msg.sender != minter) return;
-        balances[_receiver] += _amount;
-    }
-
     // いいねボタン。いいねするたびに投稿主へ固定額が支払われる
-    // エラーの場合、0以外をを返す
+    // TransferはOpenZeppelinで定義されている取引時イベント
     function good(uint256 _post_id) public {
-        if (balances[msg.sender] < good_gift) {
-            emit Good(msg.sender, posts[_post_id].author, 1);
+        // 残高不足
+        if (balanceOf(msg.sender) < good_value) {
             return;
         }
+        // 自分自身には送金できない
         if (msg.sender == posts[_post_id].author) {
-            emit Good(msg.sender, posts[_post_id].author, 2);
             return;
         }
-        balances[msg.sender] -= good_gift;
-        balances[posts[_post_id].author] += good_gift;
+        transfer(posts[_post_id].author, good_value);
         posts[_post_id].good_count++;
-        emit Good(msg.sender, posts[_post_id].author, 0);
+        emit Transfer(msg.sender, posts[_post_id].author, good_value);
     }
 
     // コンテンツを投稿する
@@ -99,7 +88,7 @@ contract keijiban {
 
     // senderの残高を返却する
     function getBalance() public view returns (uint256) {
-        return balances[msg.sender];
+        return balanceOf(msg.sender);
     }
 
     // 投稿されたコンテンツのリストを返却する
